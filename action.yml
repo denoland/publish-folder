@@ -1,0 +1,66 @@
+name: 'deno.land/x - Publish Folder'
+description: 'Publishes a folder to the deno.land/x registry.'
+inputs:
+  branch:
+    description: 'Branch name to publish to'
+    default: 'builds'
+  tag:
+    description: 'Tag to publish'
+    required: false
+  folder:
+    description: 'The folder in your repository to publish'
+    required: true
+  token:
+    description: 'A GitHub token with push permissions to your repository (ex. `${{ secrets.GITHUB_TOKEN }}`)'
+    required: true
+  git-user-name:
+    description: 'Git user.name to use when publishing'
+    required: false
+  git-user-email:
+    description: 'Git user.email to use when publishing'
+    required: false
+outputs:
+runs:
+  using: "composite"
+  env:
+    GITHUB_TOKEN: ${{ inputs.token }}
+  steps:
+    - name: Setup git user name
+      if: "${{ inputs.git-user-name != '' }}"
+      run: git config user.name "${{ inputs.git-user-name }}"
+    - name: Setup git user email
+      if: "${{ inputs.git-user-email != '' }}"
+      run: git config user.email "${{ inputs.git-user-email }}"
+    - name: Publish folder '${{ inputs.folder }}' to branch '${{ inputs.branch }}'
+      shell: bash
+      # todo: handle two runners going at the same time here
+      run: |
+        $CURRENT_SHA=$(git rev-parse HEAD)
+        echo "Publishing $CURRENT_SHA"
+        $FOLDER=$(realpath "${{ inputs.folder }}")
+        echo "Publish dir: $FOLDER"
+        $TEMP_DIR="${{ runner.temp }}/deno-x-publish"
+        echo "Temp dir: $TEMP_DIR"
+        mkdir $TEMP_DIR
+        cd $TEMP_DIR
+        $REPO_URL="https://github.com/${{ github.repository }}"
+        echo "Repo: $REPO_URL"
+        echo "Checking out repo..."
+        if git ls-remote --exit-code $REPO_URL ${{ inputs.branch}}; then
+          git clone --depth=1 --branch ${{ inputs.branch }} $REPO_URL
+        else
+          git clone --depth=1 $REPO_URL
+          git checkout --orphan ${{ inputs.branch }}
+        fi
+        git rm -rf .
+        cp -r $FOLDER $TEMP_DIR
+        git add .
+        git commit -m "Publish $CURRENT_SHA"
+        git push
+    - name: Publish tag '${{ inputs.tag }}'
+      if: "${{ inputs.tag != '' }}"
+      shell: bash
+      run: |
+        git fetch origin ${{ inputs.branch }}
+        git tag ${{ inputs.tag }} origin/${{ inputs.branch }}
+        git push ${{ inputs.tag }}
