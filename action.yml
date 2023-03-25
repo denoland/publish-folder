@@ -11,7 +11,7 @@ inputs:
     description: 'The folder in your repository to publish'
     required: true
   token:
-    description: 'A GitHub token with push permissions to your repository (ex. `${{ secrets.GITHUB_TOKEN }}`)'
+    description: 'A GitHub token with push permissions to your repository'
     required: true
   git-user-name:
     description: 'Git user.name to use when publishing'
@@ -19,48 +19,71 @@ inputs:
   git-user-email:
     description: 'Git user.email to use when publishing'
     required: false
-outputs:
 runs:
   using: "composite"
-  env:
-    GITHUB_TOKEN: ${{ inputs.token }}
   steps:
-    - name: Setup git user name
-      if: "${{ inputs.git-user-name != '' }}"
-      run: git config user.name "${{ inputs.git-user-name }}"
-    - name: Setup git user email
-      if: "${{ inputs.git-user-email != '' }}"
-      run: git config user.email "${{ inputs.git-user-email }}"
+    - name: Ensure current branch not publish branch
+      shell: bash
+      run: |
+        CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        if [ $CURRENT_BRANCH == "${{ inputs.branch }}" ]; then
+          echo "The current branch ($CURRENT_BRANCH) was the same as the output branch (${{ inputs.branch }})."
+          echo "Perhaps you're accidentally copying the GitHub Actions workflow file to the output branch?"
+          exit 1
+        fi
     - name: Publish folder '${{ inputs.folder }}' to branch '${{ inputs.branch }}'
       shell: bash
+      env:
+        GITHUB_TOKEN: ${{ inputs.token }}
       # todo: handle two runners going at the same time here
       run: |
-        $CURRENT_SHA=$(git rev-parse HEAD)
+        CURRENT_SHA=$(git rev-parse HEAD)
         echo "Publishing $CURRENT_SHA"
-        $FOLDER=$(realpath "${{ inputs.folder }}")
+        FOLDER=$(realpath '${{ inputs.folder }}')
         echo "Publish dir: $FOLDER"
-        $TEMP_DIR="${{ runner.temp }}/deno-x-publish"
-        echo "Temp dir: $TEMP_DIR"
-        mkdir $TEMP_DIR
+        TEMP_DIR="${{ runner.temp }}/deno-x-publish"
+        git config --add safe.directory $TEMP_DIR
+        USER_NAME='${{ inputs.git-user-name || 'github-actions[bot]' }}'
+        USER_EMAIL='${{ inputs.git-user-email || 'github-actions@github.com' }}'
+
+        echo "Creating temp dir $TEMP_DIR"
+        mkdir -p $TEMP_DIR
+        REPO_URL='https://github.com/${{ github.repository }}/'
+        AUTH=$(echo -n "$USER_NAME:$GITHUB_TOKEN" | openssl base64 | tr -d '\n')
+
+        echo "Cloning repo..."
         cd $TEMP_DIR
-        $REPO_URL="https://github.com/${{ github.repository }}"
-        echo "Repo: $REPO_URL"
-        echo "Checking out repo..."
-        if git ls-remote --exit-code $REPO_URL ${{ inputs.branch}}; then
-          git clone --depth=1 --branch ${{ inputs.branch }} $REPO_URL
+        git -c http.$REPO_URL.extraheader="Authorization: Basic $AUTH" clone --no-checkout $REPO_URL .
+
+        echo Setting up repo...
+        git config user.name $USER_NAME
+        git config user.email $USER_EMAIL
+        git config http.$REPO_URL.extraheader "Authorization: Basic $AUTH"
+
+        if git ls-remote --exit-code $REPO_URL '${{ inputs.branch}}'; then
+          git fetch origin '${{ inputs.branch }}'
+          echo "Checking out branch '${{ inputs.branch }}' from $REPO_URL..."
+          git checkout ${{ inputs.branch }}
         else
-          git clone --depth=1 $REPO_URL
+          echo "Creating orphan branch '${{ inputs.branch }}' for $REPO_URL..."
           git checkout --orphan ${{ inputs.branch }}
         fi
-        git rm -rf .
-        cp -r $FOLDER $TEMP_DIR
+
+        echo Cleaning repo...
+        git rm --ignore-unmatch -rf .
+
+        echo Copying files...
+        cp -r $FOLDER/. $TEMP_DIR
+
+        echo Pushing...
         git add .
-        git commit -m "Publish $CURRENT_SHA"
-        git push
-    - name: Publish tag '${{ inputs.tag }}'
-      if: "${{ inputs.tag != '' }}"
-      shell: bash
-      run: |
-        git fetch origin ${{ inputs.branch }}
-        git tag ${{ inputs.tag }} origin/${{ inputs.branch }}
-        git push ${{ inputs.tag }}
+        git commit --allow-empty -m "Publish $CURRENT_SHA"
+        git push --set-upstream origin "${{ inputs.branch }}"
+
+        if [ "${{ inputs.tag }}" == "" ]; then
+          echo "Skipping tag since none specified."
+        else
+          echo "Publishing tag '${{ inputs.tag }}'..."
+          git tag ${{ inputs.tag }} origin/${{ inputs.branch }}
+          git push ${{ inputs.tag }}
+        fi

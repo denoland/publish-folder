@@ -1,0 +1,17 @@
+on: [push]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name:
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build random data
+        run: |
+          mkdir -p dist/sub_dir
+          date > dist/time.txt
+          date > dist/sub_dir/other.txt
+      - uses: ./
+        with:
+          folder: 'dist'
+          token: ${{ secrets.GITHUB_TOKEN }}
