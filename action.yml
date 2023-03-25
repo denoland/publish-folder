@@ -1,23 +1,23 @@
 name: 'deno.land/x - Publish Folder'
 description: 'Publishes a folder to the deno.land/x registry.'
 inputs:
+  folder:
+    description: 'Folder in your directory to publish (ex. dist)'
+    required: true
+  token:
+    description: 'A GitHub token with push permissions to your repository'
+    required: true
   branch:
     description: 'Branch name to publish to'
     default: 'builds'
   tag:
     description: 'Tag to publish'
     required: false
-  folder:
-    description: 'The folder in your repository to publish'
-    required: true
-  token:
-    description: 'A GitHub token with push permissions to your repository'
-    required: true
   git-user-name:
-    description: 'Git user.name to use when publishing'
+    description: 'Git user.name to use when committing'
     required: false
   git-user-email:
-    description: 'Git user.email to use when publishing'
+    description: 'Git user.email to use when committing'
     required: false
 runs:
   using: "composite"
