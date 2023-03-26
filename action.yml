@@ -35,7 +35,6 @@ runs:
       shell: bash
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
-      # todo: handle two runners going at the same time here
       run: |
         CURRENT_SHA=$(git rev-parse HEAD)
         echo "Publishing $CURRENT_SHA"
@@ -69,22 +68,46 @@ runs:
           git checkout --orphan ${{ inputs.branch }}
         fi
 
-        echo Cleaning repo...
-        git rm --ignore-unmatch -rf .
+        # Handles multiple runners pushing to the branch at the same time.
+        # The order is not that important, so just create a new commit
+        # on top of whatever is first.
+        MAX_RETRIES=5
+        RETRIES=0
+        while true; do
+          echo Cleaning repo...
+          git rm --ignore-unmatch -rf .
 
-        echo Copying files...
-        # use rsync because it works on windows runners and provides progress
-        rsync -av --progress $FOLDER/ $TEMP_DIR --exclude '.git'
+          echo Copying files...
+          # use rsync because it works on windows runners and provides progress
+          rsync -av --progress $FOLDER/ $TEMP_DIR --exclude '.git'
 
-        echo Pushing...
-        git add .
-        git commit --allow-empty -m "Publish $CURRENT_SHA"
-        git push --set-upstream origin "${{ inputs.branch }}"
+          echo Pushing changes...
+          git add .
+          git commit --allow-empty -m "Publish $CURRENT_SHA"
+
+          if git push --set-upstream origin "${{ inputs.branch }}"; then
+            break
+          fi
+
+          # Check if we should retry
+          RETRIES=$((RETRIES + 1))
+          echo "Retry count: $RETRIES"
+
+          if [ $RETRIES -eq $MAX_RETRIES ]; then
+            echo "Failed to push changes after $MAX_RETRIES retries. Exiting."
+            exit 1
+          fi
+
+          echo "Push failed. Retrying with the latest changes..."
+          # fetch the latest remote code and reset the branch
+          git fetch origin "${{ inputs.branch }}"
+          git reset --hard origin/"${{ inputs.branch }}"
+        done
 
         if [ "${{ inputs.tag }}" == "" ]; then
           echo "Skipping tag since none specified."
         else
           echo "Publishing tag '${{ inputs.tag }}'..."
-          git tag ${{ inputs.tag }} origin/${{ inputs.branch }}
+          git tag ${{ inputs.tag }} ${{ inputs.branch }}
           git push origin ${{ inputs.tag }}
         fi
