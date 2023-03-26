@@ -42,7 +42,7 @@ runs:
         echo "Publish dir: $FOLDER"
         TEMP_DIR="${{ runner.temp }}/deno-x-publish"
         git config --add safe.directory $TEMP_DIR
-        USER_NAME='${{ inputs.git-user-name != '' && inputs.git-user-name || 'github-actions[bot]' }}'
+        USER_NAME='${{ inputs.git-user-name != '' && inputs.git-user-name || 'github-actions' }}'
         USER_EMAIL='${{ inputs.git-user-email != '' && inputs.git-user-email || 'github-actions@github.com' }}'
 
         echo "Creating temp dir $TEMP_DIR"
@@ -94,11 +94,18 @@ runs:
           echo "Retry count: $RETRIES"
 
           if [ $RETRIES -eq $MAX_RETRIES ]; then
-            echo "Failed to push changes after $MAX_RETRIES retries. Exiting."
+            echo "Failed to push changes after $MAX_RETRIES retries."
+            echo ""
+            echo "If this is failing due to authentication issues, make sure "\
+              "that either 'Read and write' workflow permissions are enabled "\
+              "in Settings > Actions > General > Workflow permissions or that "\
+              "the specified token has permission to push to the "\
+              "'${{ inputs.branch }}' branch."
             exit 1
           fi
 
           echo "Push failed. Retrying with the latest changes..."
+          sleep 0.2
           # fetch the latest remote code and reset the branch
           git fetch origin "${{ inputs.branch }}"
           git reset --hard origin/"${{ inputs.branch }}"
