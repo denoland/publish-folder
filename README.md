@@ -7,24 +7,24 @@ GitHub Action for publishing a built directory to the
 
 ## How it works
 
-First you build your output to a folder. Then after you can use this action
-which will:
+First build your output to a folder. Then after you can use this action to
+perform the following steps:
 
 1. Push the folder to a separate orphan branch in your repository.
-2. Optionally tag that commit to publish to the deno.land/x registry.
+2. If specified, tag the commit to publish it to the deno.land/x registry.
 
 ## Why?
 
-Generally you don't need a build step and overall it's not recommended, but
-_sometimes_ you do. For example:
+Generally you don't need a build step and it's not recommended, but _sometimes_
+you do. For example:
 
-- You might be building a `.wasm` file on every commit and checking that into
-  source control causes issues like merge conflicts and every commit has a
-  massive amount of data in it.
-- Your module might be very large and have a lot of files. To reduce load times,
-  you may want to bundle your module (please don't bundle your dependencies or
-  minimize your library code please).
-- Type checking your module takes a long time. Maybe you want to create a
+- You might be building a `.wasm` file on every commit, which checking into
+  source control causes issues like merge conflicts and large amounts of data in
+  every commit.
+- Your module might be very large and have numerous files. To reduce load times,
+  you may want to bundle your module (that said, please don't bundle your
+  dependencies or minimize your library code).
+- Type checking your module takes a long time. You might want to create a
   targeted .d.ts file on every commit.
 
 ## Getting started
