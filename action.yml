@@ -9,7 +9,7 @@ inputs:
     required: true
   branch:
     description: 'Branch name to publish to'
-    default: 'builds'
+    default: 'build'
   tag:
     description: 'Tag to publish'
     required: false
