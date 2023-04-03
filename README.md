@@ -73,7 +73,8 @@ jobs:
         run: deno task build
 
         # Push to "build" branch and tag that commit
-      - use: <eventual-name-of-this-action>
+      - name: Publish to deno.land/x
+        uses: <eventual-name-of-this-action>
         with:
           folder: dist
           token: ${{ secrets.GITHUB_TOKEN }}
@@ -108,7 +109,7 @@ steps:
   - name: Build
     run: deno task build
 
-  - use: <eventual-name-of-this-action>
+  - uses: <eventual-name-of-this-action>
     if: github.ref == 'refs/heads/main'
     with:
       folder: dist
