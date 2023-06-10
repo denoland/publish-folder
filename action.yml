@@ -13,6 +13,9 @@ inputs:
   tag:
     description: 'Tag to publish'
     required: false
+  tag-prefix:
+    description: 'Tag prefix to publish the branch with'
+    required: false
   git-user-name:
     description: 'Git user.name to use when committing'
     required: false
@@ -36,6 +39,20 @@ runs:
       env:
         GITHUB_TOKEN: ${{ inputs.token }}
       run: |
+        if [ "${{ inputs.tag }}" != "" ] && [ "${{ inputs.tag-prefix }}" != "" ]; then
+          echo "Error: Both tag and tag-prefix were specified. Please specify only one of them."
+          exit 1
+        fi
+
+        if [ "${{ github.event.ref_type }}" == "tag" ]; then
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [ "${{ inputs.tag-prefix }}" != "" ] && [[ "$TAG" == "${{ inputs.tag-prefix }}"* ]]; then
+            echo "Tag '$TAG' starts with the tag prefix '${{ inputs.tag-prefix }}'."
+            echo "You probably have your workflow configured incorrectly as this step shouldn't run on tags with the tag prefix."
+            exit 1
+          fi
+        fi
+
         CURRENT_SHA=$(git rev-parse HEAD)
         echo "Publishing $CURRENT_SHA"
         FOLDER=$(realpath '${{ inputs.folder }}')
@@ -112,7 +129,18 @@ runs:
         done
 
         if [ "${{ inputs.tag }}" == "" ]; then
-          echo "Skipping tag since none specified."
+          if [ "${{ inputs.tag-prefix }}" != "" ]; then
+            if [ "${{ github.event.ref_type }}" == "tag" ] then
+              TAG="${{ inputs.tag-prefix }}${GITHUB_REF#refs/tags/}"
+              echo "Publishing tag '$TAG'..."
+              git tag $TAG ${{ inputs.branch }}
+              git push origin $TAG
+            else
+              echo "Workflow was not a tag, so not tagging with prefix."
+            fi
+          else
+            echo "Skipping tag since none specified."
+          fi
         else
           echo "Publishing tag '${{ inputs.tag }}'..."
           git tag ${{ inputs.tag }} ${{ inputs.branch }}
