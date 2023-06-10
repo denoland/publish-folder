@@ -143,5 +143,7 @@ Optional inputs:
 
 - `branch` - Branch name to publish to. Defaults to "build"
 - `tag` - Tag name to tag the published commit with. Does not tag if empty.
+- `tagPrefix` - Tags the repo with a specified tag prefix when the workflow run
+  is for a tag. Note: This cannot be specified when specifying a `tag` input.
 - `git-user-name` - Git user.name to use when committing.
 - `git-user-email` - Git user.email to use when committing.
