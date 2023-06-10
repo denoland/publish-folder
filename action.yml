@@ -130,7 +130,7 @@ runs:
 
         if [ "${{ inputs.tag }}" == "" ]; then
           if [ "${{ inputs.tag-prefix }}" != "" ]; then
-            if [ "${{ github.event.ref_type }}" == "tag" ] then
+            if [ "${{ github.event.ref_type }}" == "tag" ]; then
               TAG="${{ inputs.tag-prefix }}${GITHUB_REF#refs/tags/}"
               echo "Publishing tag '$TAG'..."
               git tag $TAG ${{ inputs.branch }}
