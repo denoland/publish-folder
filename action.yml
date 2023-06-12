@@ -59,8 +59,8 @@ runs:
         echo "Publish dir: $FOLDER"
         TEMP_DIR="${{ runner.temp }}/deno-x-publish"
         git config --add safe.directory $TEMP_DIR
-        USER_NAME='${{ inputs.git-user-name != '' && inputs.git-user-name || 'github-actions' }}'
-        USER_EMAIL='${{ inputs.git-user-email != '' && inputs.git-user-email || 'github-actions@github.com' }}'
+        USER_NAME='${{ inputs.git-user-name != '' && inputs.git-user-name || 'github-actions[bot]' }}'
+        USER_EMAIL='${{ inputs.git-user-email != '' && inputs.git-user-email || 'github-actions[bot]@users.noreply.github.com' }}'
 
         echo "Creating temp dir $TEMP_DIR"
         mkdir -p $TEMP_DIR
