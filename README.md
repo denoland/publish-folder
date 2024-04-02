@@ -1,6 +1,6 @@
 # deno.land/x - Publish Folder
 
-**DO NOT USE THIS - UNDER DEVELOPMENT**
+**DEPRECATED**: Use [jsr](https://jsr.io/) instead, which supports having a build step.
 
 GitHub Action for publishing a built directory to the
 [deno.land/x](https://deno.land/x) registry.
